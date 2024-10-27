@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshBasket - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href='styles.css'>
+    <style>
+        .order-list {
+            margin-top: 20px;
+        }
+        .order-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .order-table th, .order-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .order-table th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        .order-table tr:last-child td {
+            border-bottom: none;
+        }
+        .order-table tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        .order-table tr:hover {
+            background-color: #f1f1f1;
+            transition: background-color 0.3s ease;
+        }
+        .status-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            font-size: 14px;
+        }
+        .items-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+        }
+        .items-list li {
+            margin-bottom: 4px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pending { background-color: #ffa500; }
+        .status-processing { background-color: #3498db; }
+        .status-shipped { background-color: #f1c40f; }
+        .status-delivered { background-color: #2ecc71; }
+        .action-cell {
+            text-align: center;
+        }
+        .action-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .action-button-update {
+            background-color: #3498db;
+            color: white;
+        }
+        .action-button-update:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header>
+            <nav>
+                <a href="admin_dashboard.html" class="logo">FreshBasket Admin</a>
+                <div class="nav-links">
+                    <a href="admin_dashboard.html" class="active">Dashboard</a>
+                    <a href="admin_products.html">Products</a>
+                    <a href="admin_users.html">Users</a>
+                    <a href="login.html">Logout</a>
+                </div>
+            </nav>
+        </header>
+
+        <div class="content-wrap">
+            <main>
+                <h1>Admin Dashboard</h1>
+                <section id="order-list" class="order-list"></section>
+                
+                <h2>User Order History</h2>
+                <section id="user-order-list" class="order-list"></section>
+            </main>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 FreshBasket. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            displayOrders();
+            displayUserOrders();
+        });
+
+        function displayOrders() {
+            const orderList = document.getElementById('order-list');
+            let adminOrders = JSON.parse(localStorage.getItem('adminOrders')) || [];
+
+            if (adminOrders.length === 0) {
+                orderList.innerHTML = '<p>No orders to display.</p>';
+            } else {
+                let tableHTML = `
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Address</th>
+                                <th>Payment Method</th>
+                                <th>Items</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                adminOrders.forEach((order, index) => {
+                    tableHTML += `
+                        <tr>
+                            <td>${order.id}</td>
+                            <td>${new Date(order.date).toLocaleString()}</td>
+                            <td>$${order.total}</td>
+                            <td><span class="status-indicator status-${order.status.toLowerCase()}"></span>${order.status}</td>
+                            <td>${order.address}</td>
+                            <td>${order.paymentMethod}</td>
+                            <td>
+                                <ul class="items-list">
+                                    ${order.items.map(item => `<li>${item.name} - Quantity: ${item.quantity}</li>`).join('')}
+                                </ul>
+                            </td>
+                            <td class="action-cell">
+                                <select class="status-select" onchange="updateOrderStatus(${index}, this.value)">
+                                    <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                                    <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                    <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                                </select>
+                                <button class="action-button action-button-update" onclick="updateOrderStatus(${index}, document.querySelector('select').value)">Update</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+
+                orderList.innerHTML = tableHTML;
+            }
+        }
+
+        function updateOrderStatus(index, newStatus) {
+            let adminOrders = JSON.parse(localStorage.getItem('adminOrders')) || [];
+            adminOrders[index].status = newStatus;
+            localStorage.setItem('adminOrders', JSON.stringify(adminOrders));
+
+            // Update user's orders
+            let userOrders = JSON.parse(localStorage.getItem('orders')) || [];
+            const updatedOrderId = adminOrders[index].id;
+            const userOrderIndex = userOrders.findIndex(order => order.id === updatedOrderId);
+            if (userOrderIndex !== -1) {
+                userOrders[userOrderIndex].status = newStatus;
+                localStorage.setItem('orders', JSON.stringify(userOrders));
+            }
+
+            displayOrders();
+            displayUserOrders();
+        }
+
+        function displayUserOrders() {
+            const userOrderList = document.getElementById('user-order-list');
+            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+
+            if (orders.length === 0) {
+                userOrderList.innerHTML = '<p>No orders to display.</p>';
+            } else {
+                let tableHTML = `
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Address</th>
+                                <th>Payment Method</th>
+                                <th>Items</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                orders.forEach((order) => {
+                    tableHTML += `
+                        <tr>
+                            <td>${order.id}</td>
+                            <td>${new Date(order.date).toLocaleString()}</td>
+                            <td>$${order.total}</td>
+                            <td>${order.status}</td>
+                            <td>${order.address}</td>
+                            <td>${order.paymentMethod}</td>
+                            <td>
+                                <ul class="items-list">
+                                    ${order.items.map(item => `<li>${item.name} - Quantity: ${item.quantity}</li>`).join('')}
+                                </ul>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+
+                userOrderList.innerHTML = tableHTML;
+            }
+        }
+    </script>
+</body>
+</html>

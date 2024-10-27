@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshBasket - User Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href='styles.css'>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .clear-history-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .clear-history-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        /* Styled Alert Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .modal-btn {
+            color: white;
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .modal-btn.confirm {
+            background-color: #4CAF50;
+        }
+        .modal-btn.cancel {
+            background-color: #f44336;
+        }
+        .status-pending {
+            background-color: #FFA500;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-processing {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-shipped {
+            background-color: #2ecc71;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-delivered {
+            background-color: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-cancelled {
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header>
+            <nav>
+                <a href="home.html" class="logo">FreshBasket</a>
+                <div class="nav-links">
+                    <a href="home.html">Home</a>
+                    <a href="shop.html">Shop</a>
+                    <a href="cart.html">Cart</a>
+                    <a href="login.html">Logout</a>
+                </div>
+            </nav>
+        </header>
+
+        <div class="content-wrap">
+            <main>
+                <h1>Your Previous Orders</h1>
+                <table id="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Items</th>
+                            <th>Total Price</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-body">
+                        <!-- Orders will be populated here -->
+                    </tbody>
+                </table>
+                <button id="clear-history-btn" class="clear-history-btn">Clear Completed Orders</button>
+            </main>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 FreshBasket. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Styled Alert Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <button id="modal-confirm" class="modal-btn confirm">OK</button>
+            <button id="modal-cancel" class="modal-btn cancel" style="display: none;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            displayOrders();
+            document.getElementById('clear-history-btn').addEventListener('click', confirmClearHistory);
+        });
+
+        function displayOrders() {
+            const ordersBody = document.getElementById('orders-body');
+            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+
+            ordersBody.innerHTML = '';
+
+            orders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${formatItems(order.items)}</td>
+                    <td>$${order.total}</td>
+                    <td>${new Date(order.date).toLocaleDateString()}</td>
+                    <td><span class="${getStatusClass(order.status)}">${order.status}</span></td>
+                `;
+                ordersBody.appendChild(row);
+            });
+        }
+
+        function formatItems(items) {
+            return items.map(item => `${item.name} (${item.quantity})`).join(', ');
+        }
+
+        function getStatusClass(status) {
+            switch (status.toLowerCase()) {
+                case 'pending':
+                    return 'status-pending';
+                case 'processing':
+                    return 'status-processing';
+                case 'shipped':
+                    return 'status-shipped';
+                case 'delivered':
+                    return 'status-delivered';
+                case 'cancelled':
+                    return 'status-cancelled';
+                default:
+                    return '';
+            }
+        }
+
+        function confirmClearHistory() {
+            showAlert('Are you sure you want to clear your completed orders? This action cannot be undone.', true, clearCompletedOrders);
+        }
+
+        function clearCompletedOrders() {
+            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+            const ordersToKeep = orders.filter(order => order.status === 'Yet to Ship' || order.status === 'Pending');
+            localStorage.setItem('orders', JSON.stringify(ordersToKeep));
+            displayOrders();
+            showAlert('Completed orders have been cleared.');
+        }
+
+        function showAlert(message, showCancel = false, onConfirm = null) {
+            const modal = document.getElementById('alert-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const confirmBtn = document.getElementById('modal-confirm');
+            const cancelBtn = document.getElementById('modal-cancel');
+
+            modalMessage.textContent = message;
+            modal.style.display = 'block';
+
+            cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+
+            confirmBtn.onclick = function() {
+                modal.style.display = 'none';
+                if (onConfirm) onConfirm();
+            };
+
+            cancelBtn.onclick = function() {
+                modal.style.display = 'none';
+            };
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
+    </script>
+</body>
+</html>
